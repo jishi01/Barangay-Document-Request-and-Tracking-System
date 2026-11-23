@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Resident Portal - Barangay Document Services{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto space-y-8">
+    <!-- Welcome Banner -->
+    <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl text-white p-6 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center">
+        <div>
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Resident Dashboard</span>
+            <h2 class="text-2xl font-bold text-white mt-1">
+                Welcome, {{ ((user.firstname or user.first_name or '') ~ ' ' ~ (user.surname or '')) | trim }}!
+            </h2>
+            <p class="text-xs text-gray-300 mt-1">Submit document requests or monitor your active application status.</p>
+        </div>
+        <div class="mt-4 md:mt-0 bg-white/10 px-4 py-2 rounded-lg border border-white/10 text-xs">
+            <span class="text-gray-300">Logged in as: </span>
+            <span class="font-bold text-white">@{{ user.username }}</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Left: Request Form -->
+        <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-base font-bold text-gray-900 mb-1">New Document Request</h3>
+            <p class="text-xs text-gray-500 mb-4">Applications are processed in order of submission.</p>
+
+            <form action="{{ url_for('resident_portal') }}" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">Document Type</label>
+                    <select name="doc_type" required class="w-full px-3 py-2 border border-gray-200 rounded-md text-xs focus:ring-2 focus:ring-gray-800 outline-none">
+                        <optgroup label="Clearances & Identification">
+                            <option value="Barangay Clearance">Barangay Clearance</option>
+                            <option value="Barangay ID">Barangay ID</option>
+                            <option value="Police / NBI Clearance Endorsement">Police / NBI Clearance Endorsement</option>
+                            <option value="Business Permit Clearance">Business Permit Clearance</option>
+                            <option value="Building / Construction Clearance">Building / Construction Clearance</option>
+                        </optgroup>
+                        <optgroup label="Certificates">
+                            <option value="Certificate of Residency">Certificate of Residency</option>
+                            <option value="Certificate of Indigency">Certificate of Indigency</option>
+                            <option value="Certificate of Good Moral Character">Certificate of Good Moral Character</option>
+                            <option value="First-Time Jobseeker Certificate (RA 11261)">First-Time Jobseeker Certificate (RA 11261)</option>
+                            <option value="Certificate of Low / No Income">Certificate of Low / No Income</option>
+                            <option value="Solo Parent Certification">Solo Parent Certification</option>
+                            <option value="Senior Citizen / PWD Endorsement">Senior Citizen / PWD Endorsement</option>
+                        </optgroup>
+                        <optgroup label="Permits & Blotter">
+                            <option value="Barangay Blotter / Incident Report Copy">Barangay Blotter / Incident Report Copy</option>
+                            <option value="Certificate to File Action (CFA)">Certificate to File Action (CFA)</option>
+                            <option value="Event / Activity Permit">Event / Activity Permit</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">Purpose of Request</label>
+                    <textarea name="purpose" rows="3" required placeholder="State employment, scholarship, ID application, etc." class="w-full px-3 py-2 border border-gray-200 rounded-md text-xs focus:ring-2 focus:ring-gray-800 outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">Urgency Level</label>
+                    <select name="urgency" id="urgency-select" onchange="updateUrgencyNote()" class="w-full px-3 py-2 border border-gray-200 rounded-md text-xs focus:ring-2 focus:ring-gray-800 outline-none">
+                        <option value="Standard">Standard Processing</option>
+                        <option value="Urgent">Urgent Request</option>
+                    </select>
+                    <div id="urgency-note" class="mt-2 p-2.5 rounded-md bg-blue-50 border border-blue-100 text-[11px] text-blue-800 flex items-start space-x-2">
+                        <i class="fa-solid fa-circle-info mt-0.5 shrink-0"></i>
+                        <span id="urgency-note-text"><strong>Standard Processing</strong> may take <strong>2 to 3 business days</strong> for verification and release.</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-brand-button hover:bg-brand-buttonHover text-white text-xs font-semibold rounded-md shadow transition-all flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-paper-plane"></i>
+                    <span>Submit Request</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Right: My Requests List -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">My Requested Documents</h3>
+                        <p class="text-xs text-gray-500">Live status tracker for your submitted applications</p>
+                    </div>
+                    <span class="text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-medium border border-blue-200">
+                        {{ requests | length }} Total Requests
+                    </span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+                            <tr>
+                                <th class="p-3">Ref ID</th>
+                                <th class="p-3">Document</th>
+                                <th class="p-3">Purpose</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Queue Pos</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for req in requests %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="p-3 font-mono font-bold text-blue-600">{{ req['ref_id'] }}</td>
+                                <td class="p-3 font-medium text-gray-900">{{ req['doc_type'] }}</td>
+                                <td class="p-3 text-gray-500">{{ req['purpose'] }}</td>
+                                <td class="p-3">
+                                    {% if req['status'] == 'Pending' %}
+                                    <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-[10px] font-semibold">Pending</span>
+                                    {% elif req['status'] == 'Completed' %}
+                                    <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-[10px] font-semibold">Completed</span>
+                                    {% else %}
+                                    <span class="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-[10px] font-semibold">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 font-mono font-bold text-gray-700">{{ req['queue_pos'] }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="p-6 text-center text-gray-400">
+                                    You don't have any document requests yet. Use the form on the left to submit a request.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateUrgencyNote() {
+        const select = document.getElementById('urgency-select');
+        const noteBox = document.getElementById('urgency-note');
+        const noteText = document.getElementById('urgency-note-text');
+
+        if (select.value === 'Urgent') {
+            noteBox.className = 'mt-2 p-2.5 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start space-x-2';
+            noteText.innerHTML = '<strong>Urgent Request</strong> is prioritized for <strong>same-day or 24-hour</strong> release (valid reason required).';
+        } else {
+            noteBox.className = 'mt-2 p-2.5 rounded-md bg-blue-50 border border-blue-100 text-[11px] text-blue-800 flex items-start space-x-2';
+            noteText.innerHTML = '<strong>Standard Processing</strong> may take <strong>2 to 3 business days</strong> for verification and release.';
+        }
+    }
+</script>
+{% endblock %}

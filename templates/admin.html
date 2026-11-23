@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Barangay Document Services{% endblock %}
+
+{% block content %}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Admin Header & Undo Bar -->
+    <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="bg-gray-900 text-white text-[10px] font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">Admin Control Panel</span>
+                <span class="text-xs text-gray-400">| Barangay Records & Operations</span>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mt-1">Document Request & Resident Management</h2>
+        </div>
+
+        <!-- Undo Action Control -->
+        <div class="flex items-center space-x-3 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
+            <div class="text-right">
+                <p class="text-[10px] font-bold uppercase text-gray-500">Action History</p>
+                <p class="text-xs font-medium text-gray-700">{{ undo_stack | length }} Recent Change(s)</p>
+            </div>
+            <form action="{{ url_for('undo_action') }}" method="POST">
+                <button type="submit" {% if not undo_stack %}disabled{% endif %} class="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded shadow transition-all flex items-center space-x-1">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>Undo Last Action</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SECTION 1: PRIORITY & STANDARD PROCESSING QUEUES -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- 1A: URGENT / PRIORITY QUEUE -->
+        <div class="bg-white rounded-xl shadow-sm border border-amber-200 p-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 pb-3 border-b border-gray-100 gap-2">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h3 class="text-base font-bold text-gray-900">1A. Priority Queue (Urgent)</h3>
+                        <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded">{{ urgent_queue | length }} Pending</span>
+                    </div>
+                    <p class="text-xs text-gray-500">Same-day / 24-hour expedited requests.</p>
+                </div>
+
+                <form action="{{ url_for('dequeue_request', queue_type='urgent') }}" method="POST">
+                    <button type="submit" {% if not urgent_queue %}disabled{% endif %} class="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-md shadow transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Complete Next Urgent</span>
+                    </button>
+                </form>
+            </div>
+
+            <div>
+                <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">
+                    <span>Next in Line</span>
+                    <span>Latest Submissions</span>
+                </div>
+                <div class="flex items-center gap-3 overflow-x-auto p-3 bg-amber-50/50 rounded-lg border border-amber-100 min-h-[90px]">
+                    {% for req in urgent_queue %}
+                    <div class="shrink-0 p-3 bg-white border border-amber-300 rounded-lg shadow-sm text-center min-w-[135px]">
+                        <span class="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">#{{ loop.index }}</span>
+                        <p class="text-xs font-mono font-bold text-gray-900 mt-1">{{ req.ref_id }}</p>
+                        <p class="text-[11px] text-gray-600 truncate">{{ req.doc_type }}</p>
+                        <p class="text-[10px] text-gray-400">@{{ req.username }}</p>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="text-amber-400 font-bold">➔</div>
+                    {% endif %}
+                    {% else %}
+                    <div class="w-full text-center text-xs text-gray-400 py-4">No pending urgent requests.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 1B: STANDARD PROCESSING QUEUE -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4 pb-3 border-b border-gray-100 gap-2">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h3 class="text-base font-bold text-gray-900">1B. Standard Processing Queue</h3>
+                        <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded">{{ standard_queue | length }} Pending</span>
+                    </div>
+                    <p class="text-xs text-gray-500">Regular 2–3 business days applications.</p>
+                </div>
+
+                <form action="{{ url_for('dequeue_request', queue_type='standard') }}" method="POST">
+                    <button type="submit" {% if not standard_queue %}disabled{% endif %} class="px-4 py-2 bg-green-700 hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs rounded-md shadow transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Complete Next Standard</span>
+                    </button>
+                </form>
+            </div>
+
+            <div>
+                <div class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2 flex justify-between">
+                    <span>Next in Line</span>
+                    <span>Latest Submissions</span>
+                </div>
+                <div class="flex items-center gap-3 overflow-x-auto p-3 bg-gray-50 rounded-lg border border-gray-200 min-h-[90px]">
+                    {% for req in standard_queue %}
+                    <div class="shrink-0 p-3 bg-white border border-blue-200 rounded-lg shadow-sm text-center min-w-[135px]">
+                        <span class="text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">#{{ loop.index }}</span>
+                        <p class="text-xs font-mono font-bold text-gray-900 mt-1">{{ req.ref_id }}</p>
+                        <p class="text-[11px] text-gray-600 truncate">{{ req.doc_type }}</p>
+                        <p class="text-[10px] text-gray-400">@{{ req.username }}</p>
+                    </div>
+                    {% if not loop.last %}
+                    <div class="text-gray-400 font-bold">➔</div>
+                    {% endif %}
+                    {% else %}
+                    <div class="w-full text-center text-xs text-gray-400 py-4">No pending standard requests.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: ALL DOCUMENT REQUEST RECORDS -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-lg font-bold text-gray-900">2. Document Request Log</h3>
+                    <span class="bg-gray-100 text-gray-700 text-[10px] font-bold px-2 py-0.5 rounded">{{ nodes | length }} Total</span>
+                </div>
+                <p class="text-xs text-gray-500">Review all submitted applications or cancel pending requests.</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+                    <tr>
+                        <th class="p-3">Ref ID</th>
+                        <th class="p-3">Applicant</th>
+                        <th class="p-3">Document Type</th>
+                        <th class="p-3">Purpose</th>
+                        <th class="p-3">Urgency</th>
+                        <th class="p-3">Status</th>
+                        <th class="p-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for node in nodes %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 font-mono font-bold text-blue-600">{{ node.ref_id }}</td>
+                        <td class="p-3 font-medium text-gray-800">@{{ node.username }}</td>
+                        <td class="p-3 font-medium text-gray-900">{{ node.doc_type }}</td>
+                        <td class="p-3 text-gray-600">{{ node.purpose }}</td>
+                        <td class="p-3">
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded {{ 'bg-red-50 text-red-700' if node.urgency == 'Urgent' else 'bg-gray-100 text-gray-600' }}">
+                                {{ node.urgency }}
+                            </span>
+                        </td>
+                        <td class="p-3">
+                            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full {{ 'bg-amber-100 text-amber-800' if node.status == 'Pending' else ('bg-green-100 text-green-800' if node.status == 'Completed' else 'bg-red-100 text-red-800') }}">
+                                {{ node.status }}
+                            </span>
+                        </td>
+                        <td class="p-3 text-right">
+                            {% if node.status == 'Pending' %}
+                            <form action="{{ url_for('remove_node', req_id=node.id) }}" method="POST" class="inline">
+                                <button type="submit" class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-[11px] rounded font-medium transition-all">
+                                    Cancel Request
+                                </button>
+                            </form>
+                            {% else %}
+                            <span class="text-gray-400 text-[11px]">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="p-4 text-center text-gray-400">No document requests found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SECTION 3: RESIDENT DIRECTORY -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 gap-2">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <h3 class="text-lg font-bold text-gray-900">3. Registered Residents Directory</h3>
+                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">{{ residents | length }} Residents</span>
+                </div>
+                <p class="text-xs text-gray-500">View and sort registered barangay residents alphabetically by surname.</p>
+            </div>
+
+            <div class="flex items-center space-x-2">
+                <a href="{{ url_for('admin_portal', sort='ASC') }}" class="px-3 py-1.5 {{ 'bg-gray-900 text-white' if sort_order == 'ASC' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} text-xs font-semibold rounded transition-all">
+                    Surname (A–Z)
+                </a>
+                <a href="{{ url_for('admin_portal', sort='DESC') }}" class="px-3 py-1.5 {{ 'bg-gray-900 text-white' if sort_order == 'DESC' else 'bg-gray-100 text-gray-700 hover:bg-gray-200' }} text-xs font-semibold rounded transition-all">
+                    Surname (Z–A)
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-gray-50 text-gray-600 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+                    <tr>
+                        <th class="p-3">Surname</th>
+                        <th class="p-3">First Name</th>
+                        <th class="p-3">Username</th>
+                        <th class="p-3">Address</th>
+                        <th class="p-3">Contact</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for res in residents %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-3 font-bold text-gray-900">{{ res.surname }}</td>
+                        <td class="p-3 font-medium text-gray-800">{{ res.firstname }}</td>
+                        <td class="p-3 font-mono text-gray-500">@{{ res.username }}</td>
+                        <td class="p-3 text-gray-600">{{ res.address }}</td>
+                        <td class="p-3 font-mono text-gray-600">{{ res.contact }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="p-4 text-center text-gray-400">No resident records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

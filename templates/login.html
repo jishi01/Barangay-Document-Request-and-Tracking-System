@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Barangay Document Services{% endblock %}
+
+{% block content %}
+<div class="h-full flex items-center justify-center">
+    <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <!-- Left Hero Typography -->
+        <div class="pr-4">
+            <p class="text-xs font-bold tracking-widest text-gray-400 uppercase mb-3">BARANGAY ONLINE SERVICES</p>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight tracking-tight mb-6">
+                Document services, made more accessible.
+            </h1>
+            <p class="text-gray-600 text-base leading-relaxed">
+                Submit your document requests, follow their progress, and access barangay services in one place.
+            </p>
+        </div>
+
+        <!-- Right Login Form Card -->
+        <div class="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+            <div class="mb-6">
+                <p class="text-xs font-bold tracking-wider text-gray-400 uppercase mb-1">ACCOUNT ACCESS</p>
+                <h2 class="text-2xl font-bold text-gray-900">Sign in</h2>
+                <p class="text-sm text-gray-500 mt-1">Enter your registered account details.</p>
+            </div>
+
+            <form action="{{ url_for('login') }}" method="POST" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">Username</label>
+                    <input type="text" name="username" required
+                           class="w-full px-4 py-2.5 rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-800 transition-all text-sm"
+                           placeholder="Enter username">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 uppercase mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" name="password" id="login-password" required
+                               class="w-full px-4 py-2.5 pr-10 rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-800 transition-all text-sm"
+                               placeholder="Enter password">
+                        <button type="button" onclick="togglePassword()" aria-label="Toggle password visibility"
+                                class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-700 focus:outline-none">
+                            <i id="password-eye-icon" class="fa-solid fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 px-4 bg-brand-button hover:bg-brand-buttonHover text-white font-medium rounded-md shadow transition-all text-sm mt-2">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="mt-6 text-center text-xs text-gray-500">
+                Don't have an account?
+                <a href="{{ url_for('register') }}" class="font-bold text-gray-900 hover:underline">Register here</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('login-password');
+        const eyeIcon = document.getElementById('password-eye-icon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
+</script>
+{% endblock %}

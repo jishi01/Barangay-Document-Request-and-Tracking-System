@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Track Request - Barangay Document Services{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Search Card -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Track Document Request</h2>
+        <p class="text-xs text-gray-500 mb-6">Enter your Reference ID to check the real-time status of your application.</p>
+
+        <form action="{{ url_for('track') }}" method="POST" class="flex gap-3 max-w-lg">
+            <input type="text" name="ref_id" value="{{ searched_ref or '' }}" placeholder="e.g. REQ-1001" required
+                   class="flex-1 px-4 py-2.5 border border-gray-300 rounded-md text-sm font-mono uppercase focus:ring-2 focus:ring-gray-800 outline-none">
+            <button type="submit" class="bg-brand-button hover:bg-brand-buttonHover text-white px-6 py-2.5 rounded-md font-medium text-sm transition-all">
+                Track Status
+            </button>
+        </form>
+    </div>
+
+    <!-- Search Result Card -->
+    {% if searched_ref %}
+        {% if result %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600">Application Record</span>
+                    <h3 class="text-2xl font-mono font-bold text-gray-900">{{ result.ref_id }}</h3>
+                </div>
+                <span class="px-3.5 py-1 rounded-full text-xs font-bold
+                    {{ 'bg-amber-100 text-amber-800' if result.status == 'Pending' else ('bg-green-100 text-green-800' if result.status == 'Completed' else 'bg-red-100 text-red-800') }}">
+                    {{ result.status }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-100">
+                    <p class="text-gray-400 uppercase font-semibold text-[10px]">Document Type</p>
+                    <p class="font-bold text-gray-900 mt-0.5">{{ result.doc_type }}</p>
+                </div>
+                <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-100">
+                    <p class="text-gray-400 uppercase font-semibold text-[10px]">Applicant Username</p>
+                    <p class="font-bold text-gray-900 mt-0.5">@{{ result.username }}</p>
+                </div>
+                <div class="p-3.5 bg-gray-50 rounded-lg border border-gray-100 md:col-span-2">
+                    <p class="text-gray-400 uppercase font-semibold text-[10px]">Purpose of Request</p>
+                    <p class="text-gray-700 mt-0.5">{{ result.purpose }}</p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-6 text-xs">
+            <p class="font-bold text-sm mb-1">Reference ID Not Found</p>
+            <p>No document request matched Reference ID <span class="font-mono font-bold">{{ searched_ref }}</span>. Please verify your reference number and try again.</p>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
