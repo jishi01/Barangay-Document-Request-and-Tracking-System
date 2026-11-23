@@ -334,3 +334,50 @@ def remove_node(req_id):
     req = conn.execute("SELECT * FROM requests WHERE id = ?", (req_id,)).fetchone()
     if req:
         conn.execute("UPDATE requests SET status = 'Cancelled' WHERE id = ?", (req_id,))
+        conn.commit()
+
+        undo_stack = session.get('undo_stack', [])
+        undo_stack.append({
+            'action': 'CANCEL',
+            'req_id': req['id'],
+            'ref_id': req['ref_id'],
+            'previous_status': req['status']
+        })
+        session['undo_stack'] = undo_stack
+        flash(f"Cancelled request {req['ref_id']}.", "warning")
+
+    conn.close()
+    return redirect(url_for('admin_portal'))
+
+
+@app.route('/track', methods=['GET', 'POST'])
+def track():
+    result_node = None
+    searched_ref = None
+    if request.method == 'POST':
+        searched_ref = request.form.get('ref_id', '').strip().upper()
+        nodes = get_linked_list_nodes()
+        result_node = next((n for n in nodes if n['ref_id'].upper() == searched_ref), None)
+
+    return render_template('track.html', result=result_node, searched_ref=searched_ref)
+
+
+@app.route('/residents')
+def residents_list():
+    if 'user' not in session or session['user'].get('role') != 'admin':
+        return redirect(url_for('login'))
+
+    order = request.args.get('sort', 'ASC')
+    residents = get_sorted_residents(order)
+    return render_template('residents.html', user=session['user'], residents=residents, sort_order=order)
+
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout():
+    session.clear()
+    flash('Logged out successfully.', 'info')
+    return redirect(url_for('login'))
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
