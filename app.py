@@ -64,11 +64,16 @@ def init_db():
     conn.close()
 
 # Data Structures Helpers
-def get_fifo_queue():
+def get_fifo_queues():
     conn = get_db()
-    queue = conn.execute("SELECT * FROM requests WHERE status = 'Pending' ORDER BY id ASC").fetchall()
+    urgent = conn.execute(
+        "SELECT * FROM requests WHERE status = 'Pending' AND urgency = 'Urgent' ORDER BY id ASC"
+    ).fetchall()
+    standard = conn.execute(
+        "SELECT * FROM requests WHERE status = 'Pending' AND urgency != 'Urgent' ORDER BY id ASC"
+    ).fetchall()
     conn.close()
-    return [dict(q) for q in queue]
+    return [dict(q) for q in urgent], [dict(q) for q in standard]
 
 def get_sorted_residents(order='ASC'):
     conn = get_db()
@@ -165,6 +170,7 @@ def register():
             conn.close()
             
     return render_template('register.html')
+
 @app.route('/resident', methods=['GET', 'POST'])
 def resident_portal():
     if 'user' not in session or session['user'].get('role') != 'resident':
@@ -199,35 +205,24 @@ def resident_portal():
         'SELECT * FROM requests WHERE username = ? ORDER BY id DESC', 
         (user['username'],)
     ).fetchall()
+    conn.close()
     
-    fifo_queue = get_fifo_queue()
+    urgent_queue, standard_queue = get_fifo_queues()
     requests_with_pos = []
     
     for req in my_requests_rows:
         r_dict = dict(req)
         if r_dict['status'] == 'Pending':
-            pos = next((i + 1 for i, q in enumerate(fifo_queue) if q['ref_id'] == r_dict['ref_id']), None)
-            r_dict['queue_pos'] = f"#{pos}" if pos else '-'
+            if r_dict['urgency'] == 'Urgent':
+                pos = next((i + 1 for i, q in enumerate(urgent_queue) if q['ref_id'] == r_dict['ref_id']), None)
+                r_dict['queue_pos'] = f"Urgent #{pos}" if pos else '-'
+            else:
+                pos = next((i + 1 for i, q in enumerate(standard_queue) if q['ref_id'] == r_dict['ref_id']), None)
+                r_dict['queue_pos'] = f"Standard #{pos}" if pos else '-'
         else:
             r_dict['queue_pos'] = '-'
         requests_with_pos.append(r_dict)
         
-    conn.close()
-    return render_template('resident.html', user=user, requests=requests_with_pos)
-    
-    # Calculate queue positions
-    fifo_queue = get_fifo_queue()
-    requests_with_pos = []
-    for req in my_requests:
-        r_dict = dict(req)
-        if r_dict['status'] == 'Pending':
-            pos = next((i + 1 for i, q in enumerate(fifo_queue) if q['ref_id'] == r_dict['ref_id']), None)
-            r_dict['queue_pos'] = pos if pos else '-'
-        else:
-            r_dict['queue_pos'] = '-'
-        requests_with_pos.append(r_dict)
-        
-    conn.close()
     return render_template('resident.html', user=user, requests=requests_with_pos)
 
 @app.route('/admin')
@@ -237,33 +232,36 @@ def admin_portal():
         return redirect(url_for('login'))
         
     order = request.args.get('sort', 'ASC')
-    fifo_queue = get_fifo_queue()
+    urgent_queue, standard_queue = get_fifo_queues()
     linked_nodes = get_linked_list_nodes()
     sorted_residents = get_sorted_residents(order)
     undo_stack = session.get('undo_stack', [])
     
     return render_template('admin.html', 
                            user=session['user'],
-                           queue=fifo_queue, 
+                           urgent_queue=urgent_queue,
+                           standard_queue=standard_queue,
                            nodes=linked_nodes, 
                            residents=sorted_residents, 
                            undo_stack=undo_stack,
                            sort_order=order)
 
-@app.route('/admin/dequeue', methods=['POST'])
-def dequeue_request():
+@app.route('/admin/dequeue/<string:queue_type>', methods=['POST'])
+def dequeue_request(queue_type):
     if 'user' not in session or session['user']['role'] != 'admin':
         return redirect(url_for('login'))
         
-    fifo_queue = get_fifo_queue()
-    if fifo_queue:
-        next_req = fifo_queue[0]
+    urgent_queue, standard_queue = get_fifo_queues()
+    target_queue = urgent_queue if queue_type == 'urgent' else standard_queue
+
+    if target_queue:
+        next_req = target_queue[0]
         conn = get_db()
         conn.execute("UPDATE requests SET status = 'Completed' WHERE id = ?", (next_req['id'],))
         conn.commit()
         conn.close()
         
-        # Push action to LIFO Undo Stack
+        # Push action to LIFO Undo Stack (matches keys used by undo_action)
         undo_stack = session.get('undo_stack', [])
         undo_stack.append({
             'action': 'DEQUEUE',
@@ -272,9 +270,9 @@ def dequeue_request():
             'previous_status': 'Pending'
         })
         session['undo_stack'] = undo_stack
-        flash(f"Processed request {next_req['ref_id']} from Queue.", "success")
+        flash(f"Completed {queue_type.capitalize()} request {next_req['ref_id']}.", "success")
     else:
-        flash("Queue is empty!", "info")
+        flash(f"No pending requests in the {queue_type} queue!", "info")
         
     return redirect(url_for('admin_portal'))
 
@@ -318,7 +316,7 @@ def remove_node(req_id):
             'previous_status': req['status']
         })
         session['undo_stack'] = undo_stack
-        flash(f"Removed Node {req['ref_id']} from active queue.", "warning")
+        flash(f"Cancelled request {req['ref_id']}.", "warning")
         
     conn.close()
     return redirect(url_for('admin_portal'))
