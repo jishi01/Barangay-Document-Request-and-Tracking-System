@@ -2,26 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>{% block title %}Barangay Document Services{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        sidebar: {
-                            DEFAULT: '#19191e',
-                            hover: '#25252c',
-                            active: '#2e2e38',
-                            text: '#9da3ae'
-                        },
                         brand: {
-                            button: '#2d3748',
-                            buttonHover: '#1a202c'
+                            sidebar: '#181A1F',
+                            canvas: '#F8F9FA',
+                            button: '#24292F',
+                            buttonHover: '#32383F'
                         }
                     }
                 }
@@ -29,118 +24,154 @@
         }
     </script>
 </head>
-<body class="h-screen flex overflow-hidden bg-gray-100 text-gray-800">
+<body class="bg-brand-canvas text-gray-800 font-sans antialiased min-h-screen flex flex-col lg:flex-row overflow-x-hidden">
 
-    <!-- LEFT SIDEBAR -->
-    <aside class="w-64 bg-sidebar text-sidebar-text flex flex-col justify-between shrink-0 select-none">
-        <div>
-            <!-- Sidebar Header / Logo -->
-            <div class="p-6 flex items-start space-x-3 border-b border-gray-800">
-                <div class="bg-white text-black font-extrabold text-xl w-9 h-9 rounded flex items-center justify-center shrink-0 shadow-md">
-                    B
+    <!-- Mobile & Tablet Top Navbar (Hidden on Desktop lg+) -->
+    <header class="lg:hidden bg-brand-sidebar text-white px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-md">
+        <div class="flex items-center space-x-2.5 min-w-0">
+            <div class="w-8 h-8 rounded bg-white text-brand-sidebar flex items-center justify-center font-bold text-base shadow shrink-0">
+                B
+            </div>
+            <div class="truncate">
+                <h1 class="text-xs font-bold tracking-wider uppercase leading-tight">BARANGAY</h1>
+                <p class="text-[9px] text-gray-400 tracking-widest uppercase truncate">DOCUMENT SERVICES</p>
+            </div>
+        </div>
+        <button type="button" onclick="toggleMobileMenu()" aria-label="Toggle Menu"
+                class="p-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-800 focus:outline-none shrink-0">
+            <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+    </header>
+
+    <!-- Backdrop Overlay for Mobile/Tablet Drawer -->
+    <div id="mobile-backdrop" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+
+    <!-- Sidebar Navigation (Drawer on Mobile/Tablet, Fixed on Desktop) -->
+    <aside id="sidebar-nav" class="fixed inset-y-0 left-0 z-50 w-64 bg-brand-sidebar text-gray-300 flex flex-col justify-between shrink-0 transform -translate-x-full transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 lg:min-h-screen">
+        <div class="overflow-y-auto">
+            <!-- Brand Logo -->
+            <div class="p-6 flex items-center justify-between border-b border-gray-800">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded bg-white text-brand-sidebar flex items-center justify-center font-bold text-lg shadow shrink-0">
+                        B
+                    </div>
+                    <div>
+                        <h1 class="text-sm font-bold text-white tracking-wider uppercase leading-tight">BARANGAY</h1>
+                        <p class="text-[10px] text-gray-400 tracking-widest uppercase">DOCUMENT SERVICES</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-white font-bold tracking-wider text-sm leading-tight">BARANGAY</h1>
-                    <p class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">DOCUMENT SERVICES</p>
-                </div>
+                <button type="button" onclick="toggleMobileMenu()" class="lg:hidden text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
             </div>
 
             <!-- Navigation Links -->
-            <nav class="mt-6 px-3 space-y-1">
-                <div class="px-3 pb-2 text-[11px] font-bold tracking-wider text-gray-500 uppercase">SERVICES</div>
-                
-                {% if not session.get('user') %}
-                <a href="{{ url_for('login') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-white hover:bg-sidebar-hover">
-                    <i class="fa-solid fa-right-to-bracket w-5 text-gray-400"></i>
-                    <span>Sign In</span>
-                </a>
-                <a href="{{ url_for('register') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-hover">
-                    <i class="fa-solid fa-user-plus w-5 text-gray-400"></i>
-                    <span>Create Account</span>
-                </a>
-                {% endif %}
-
-                <a href="{{ url_for('track') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg hover:bg-sidebar-hover">
-                    <i class="fa-solid fa-magnifying-glass w-5 text-gray-400"></i>
-                    <span>Track Request</span>
-                </a>
-
-                {% if session.get('user') %}
-                <div class="pt-6">
-                    <div class="px-3 pb-2 text-[11px] font-bold tracking-wider text-gray-500 uppercase">PORTALS</div>
-                    {% if session['user'].get('role') == 'admin' %}
-                    <a href="{{ url_for('admin_portal') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-white bg-sidebar-active mb-1">
-                        <i class="fa-solid fa-user-shield w-5 text-gray-400"></i>
-                        <span>Admin Portal</span>
+            <nav class="p-4 space-y-6">
+                <div>
+                    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">SERVICES</p>
+                    <a href="{{ url_for('track') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'track' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                        <i class="fa-solid fa-magnifying-glass w-4 text-center"></i>
+                        <span>Track Request</span>
                     </a>
-                    <a href="{{ url_for('residents_list') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-white hover:bg-sidebar-hover">
-                        <i class="fa-solid fa-users w-5 text-gray-400"></i>
-                        <span>Residents Directory</span>
-                    </a>
+                </div>
+
+                <div>
+                    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider px-3 mb-2">PORTALS</p>
+                    {% if session.get('user') %}
+                        {% if session['user']['role'] == 'admin' %}
+                            <a href="{{ url_for('admin_portal') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'admin_portal' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                                <i class="fa-solid fa-shield-halved w-4 text-center"></i>
+                                <span>Admin Portal</span>
+                            </a>
+                            <a href="{{ url_for('residents_list') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'residents_list' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                                <i class="fa-solid fa-users w-4 text-center"></i>
+                                <span>Resident Directory</span>
+                            </a>
+                        {% else %}
+                            <a href="{{ url_for('resident_portal') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'resident_portal' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                                <i class="fa-solid fa-file-lines w-4 text-center"></i>
+                                <span>Resident Portal</span>
+                            </a>
+                        {% endif %}
                     {% else %}
-                    <a href="{{ url_for('resident_portal') }}" class="flex items-center px-4 py-3 text-sm font-medium rounded-lg text-white bg-sidebar-active">
-                        <i class="fa-solid fa-id-card w-5 text-gray-400"></i>
-                        <span>Resident Portal</span>
-                    </a>
+                        <a href="{{ url_for('login') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'login' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                            <i class="fa-solid fa-right-to-bracket w-4 text-center"></i>
+                            <span>Sign In</span>
+                        </a>
+                        <a href="{{ url_for('register') }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-md text-sm transition-colors {{ 'bg-gray-800 text-white font-medium' if request.endpoint == 'register' else 'hover:bg-gray-800/60 hover:text-white' }}">
+                            <i class="fa-solid fa-user-plus w-4 text-center"></i>
+                            <span>Create Account</span>
+                        </a>
                     {% endif %}
                 </div>
-                {% endif %}
             </nav>
         </div>
 
-        <!-- User Profile Footer -->
+        <!-- User Profile / Session Footer -->
         <div class="p-4 border-t border-gray-800">
             {% if session.get('user') %}
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2 overflow-hidden">
-                    <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white text-xs font-bold uppercase">
-                        {{ (session['user'].get('firstname') or session['user'].get('username') or 'U')[0] }}
+                <div class="flex items-center justify-between px-2 py-2">
+                    <div class="flex items-center space-x-2.5 truncate">
+                        <div class="w-8 h-8 rounded-full bg-gray-700 text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                            {{ (session['user'].get('surname') or session['user'].get('username') or 'U')[0] }}
+                        </div>
+                        <div class="truncate">
+                            <p class="text-xs font-semibold text-white truncate">
+                                {{ session['user'].get('surname') or session['user'].get('username') }}
+                            </p>
+                            <p class="text-[10px] text-gray-400 capitalize">{{ session['user'].get('role', 'resident') }}</p>
+                        </div>
                     </div>
-                    <div class="truncate">
-                        <p class="text-xs font-medium text-white truncate">
-                            {{ session['user'].get('firstname', '') }} {{ session['user'].get('surname', '') }}
-                        </p>
-                        <p class="text-[10px] text-gray-400 capitalize">{{ session['user'].get('role', 'Resident') }}</p>
-                    </div>
+                    <a href="{{ url_for('logout') }}" title="Sign Out" class="text-gray-400 hover:text-red-400 transition-colors p-1.5 shrink-0">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </a>
                 </div>
-                <a href="{{ url_for('logout') }}" title="Logout" class="text-gray-400 hover:text-white p-1">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </a>
-            </div>
             {% else %}
-            <div class="text-center text-xs text-gray-500">Public Access System</div>
+                <p class="text-[11px] text-gray-500 text-center">Barangay Online Services</p>
             {% endif %}
         </div>
     </aside>
 
-    <!-- MAIN CONTENT CONTAINER -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col min-w-0 w-full">
         <!-- Top Header Bar -->
-        <header class="bg-white border-b border-gray-200 py-3.5 px-8 flex items-center justify-between shrink-0">
-            <div class="text-xs font-semibold text-gray-500 tracking-wide">
-                Barangay Document Request and Tracking System
-            </div>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-green-500"></span>
+        <header class="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs sm:text-sm font-semibold text-gray-800">Barangay Document Request and Tracking System</p>
+            <span class="inline-flex items-center space-x-1.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                 <span>Active Database</span>
             </span>
         </header>
 
-        <!-- Page Dynamic Body -->
-        <div class="flex-1 overflow-y-auto p-8">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="px-4 sm:px-6 lg:px-8 pt-4 space-y-2 max-w-7xl w-full mx-auto">
                     {% for category, message in messages %}
-                        <div class="mb-4 p-3 rounded-md text-xs font-semibold text-white {{ 'bg-red-600' if category in ['danger', 'error'] else ('bg-green-600' if category == 'success' else 'bg-blue-600') }}">
-                            {{ message }}
+                        <div class="px-4 py-3 rounded-lg text-xs font-medium border flex items-center justify-between
+                            {{ 'bg-emerald-50 text-emerald-800 border-emerald-200' if category == 'success' else
+                               ('bg-red-50 text-red-800 border-red-200' if category == 'error' else
+                               ('bg-amber-50 text-amber-800 border-amber-200' if category == 'warning' else 'bg-blue-50 text-blue-800 border-blue-200')) }}">
+                            <span>{{ message }}</span>
                         </div>
                     {% endfor %}
-                {% endif %}
-            {% endwith %}
+                </div>
+            {% endif %}
+        {% endwith %}
 
+        <!-- Page Content -->
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
             {% block content %}{% endblock %}
-        </div>
-    </main>
+        </main>
+    </div>
 
+    <script>
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar-nav');
+            const backdrop = document.getElementById('mobile-backdrop');
+            sidebar.classList.toggle('-translate-x-full');
+            backdrop.classList.toggle('hidden');
+        }
+    </script>
 </body>
 </html>
